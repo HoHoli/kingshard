@@ -45,6 +45,7 @@ const (
 	ADMIN_OPT_SHOW    = "show"
 	ADMIN_OPT_CHANGE  = "change"
 	ADMIN_SAVE_CONFIG = "save"
+    ADMIN_OPT_CHANGE_MASTER = "changemaster" // change master
 
 	ADMIN_PROXY         = "proxy"
 	ADMIN_NODE          = "node"
@@ -113,6 +114,19 @@ func (c *ClientConn) handleNodeCmd(rows sqlparser.InsertRows) error {
 			role,
 			addr,
 		)
+    case ADMIN_OPT_CHANGE_MASTER:
+        newMasterAddr := strings.Trim(sqlparser.String(tuple[3]),"'")
+
+        err = c.ChangeMaster(
+            nodeName,
+            newMasterAddr,
+        )
+        if err != nil {
+            golog.Error("Node", "changemaster", err.Error(), 0)
+        }else{
+            // save config
+            err = c.handleAdminSave("proxy", "config")  
+        }
 	default:
 		err = errors.ErrCmdUnsupport
 		golog.Error("ClientConn", "handleNodeCmd", err.Error(),
@@ -206,6 +220,10 @@ func (c *ClientConn) DownDatabase(nodeName string, role string, addr string) err
 	}
 
 	return c.proxy.DownSlave(nodeName, addr)
+}
+
+func (c *ClientConn) ChangeMaster(nodeName string, newMasterAddr string) error {
+    return c.proxy.ChangeMaster(nodeName, newMasterAddr)
 }
 
 func (c *ClientConn) checkCmdOrder(region string, columns sqlparser.Columns) error {

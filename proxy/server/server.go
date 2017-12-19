@@ -703,6 +703,14 @@ func (s *Server) DownSlave(node, slaveAddr string) error {
 	return n.DownSlave(slaveAddr, backend.ManualDown)
 }
 
+func (s *Server) ChangeMaster(node, newMasterAddr string) error {
+    n := s.GetNode(node)
+    if n == nil {
+        return fmt.Errorf("invalid node [%s].", node)
+    }
+    return n.ChangeMaster(newMasterAddr)
+}
+
 func (s *Server) GetNode(name string) *backend.Node {
 	return s.nodes[name]
 }
