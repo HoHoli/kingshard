@@ -282,6 +282,46 @@ func (n *Node) UpSlave(addr string) error {
 	return err
 }
 
+func (n *Node) ChangeMaster(newMasterAddr string) error {
+    var oldMasterAddr string
+
+    if newMasterAddr == n.Master.addr{
+        return nil
+    }
+    oldMasterAddr = n.Master.addr
+    n.DownMaster(oldMasterAddr, Down)
+
+    // change slave role
+    err := n.DeleteSlave(newMasterAddr)    
+    if err != nil {
+        golog.Error("Node", "step -1: deleteSlave", err.Error(), 0)
+        return err
+    }
+
+    // change slave to master
+    db, err := n.UpDB(newMasterAddr)
+    if err != nil {
+        golog.Error("Node", "step -2: UpMaster", err.Error(), 0)
+        return err
+    }
+    n.Master = db
+
+    // change old master to slave, old master may be down, get error return nil
+    err = n.AddSlave(oldMasterAddr)
+    if err != nil {
+        golog.Error("Node", "step -3: addSlave", err.Error(), 0)
+        return nil
+    } else {
+        err = n.UpSlave(oldMasterAddr)
+        if err != nil {
+            golog.Error("Node", "step -4: upSlave", err.Error(), 0)
+            return nil
+        }       
+    }
+
+    return err
+}
+
 func (n *Node) DownMaster(addr string, state int32) error {
 	db := n.Master
 	if db == nil || db.addr != addr {
